@@ -46,16 +46,20 @@ class ClassifierDataset(Dataset):
 class AuctionNet(torch.nn.Module):
     def __init__(self, num_feature=10, num_class=5):
         super(AuctionNet, self).__init__()
-        self.fc1 = torch.nn.Linear(num_feature, 512)
-        self.fc2 = torch.nn.Linear(512, 256)
-        self.fc3 = torch.nn.Linear(256, 128)
-        self.fc4 = torch.nn.Linear(128, 64)
-        self.fc5 = torch.nn.Linear(64, num_class)
+        self.fc1 = torch.nn.Linear(num_feature, 2048)
+        self.fc2 = torch.nn.Linear(2048, 1024)
+        self.fc3 = torch.nn.Linear(1024, 512)
+        self.fc4 = torch.nn.Linear(512, 256)
+        self.fc5 = torch.nn.Linear(256, 128)
+        self.fc6 = torch.nn.Linear(128, 64)
+        self.fc7 = torch.nn.Linear(64, num_class)
 
-        self.bn1 = torch.nn.LayerNorm(512)
-        self.bn2 = torch.nn.LayerNorm(256)
-        self.bn3 = torch.nn.LayerNorm(128)
-        self.bn4 = torch.nn.LayerNorm(64)
+        self.bn1 = torch.nn.LayerNorm(2048)
+        self.bn2 = torch.nn.LayerNorm(1024)
+        self.bn3 = torch.nn.LayerNorm(512)
+        self.bn4 = torch.nn.LayerNorm(256)
+        self.bn5 = torch.nn.LayerNorm(128)
+        self.bn6 = torch.nn.LayerNorm(64)
 
         self.relu = torch.nn.ReLU()
         self.dropout = torch.nn.Dropout(p=0.2)
@@ -81,6 +85,16 @@ class AuctionNet(torch.nn.Module):
         x = self.dropout(x)
 
         x = self.fc5(x)
+        x = self.bn5(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        x = self.fc6(x)
+        x = self.bn6(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+
+        x = self.fc7(x)
 
         return x
 
@@ -123,12 +137,13 @@ def get_class_distribution(obj):
 
 @click.command(help="Preferans auction estimation")
 @click.option('--data_path', default='/home/wingman2/datasets/pref', help='Dataset root directory')
-@click.option('--lr', default=0.001, help='Learning rate')
+@click.option('--lr', default=0.003, help='Learning rate')
 @click.option('--num_epochs', default=500, help='Number of epochs')
 @click.option('--batch_size', default=1024, help='Batch size')
 @click.option('--logdir', default='/home/wingman2/pref_tb_logs', help='Path to logging directory')
 @click.option('--name', default='exp-' + datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
 @click.option('--checkpoints', required=False, help='Path to model checkpoints used as a starting point for training')
+@click.option('--under/--no-under', default=False)
 def train(**options):
     logs_dir = os.path.join(options['logdir'], options['name'])
     writer = SummaryWriter(log_dir=logs_dir)
@@ -153,24 +168,25 @@ def train(**options):
     train_dataset = ClassifierDataset(torch.from_numpy(X_train).float(), torch.from_numpy(y_train).long())
     val_dataset = ClassifierDataset(torch.from_numpy(X_val).float(), torch.from_numpy(y_val).long())
 
-    target_list = []
-    for _, t in train_dataset:
-        target_list.append(t)
+    if not options['under']:
+        target_list = []
+        for _, t in train_dataset:
+            target_list.append(t)
 
-    target_list = torch.tensor(target_list)
-    target_list = target_list[torch.randperm(len(target_list))]
+        target_list = torch.tensor(target_list)
+        target_list = target_list[torch.randperm(len(target_list))]
 
-    class_count = [i for i in get_class_distribution(y_train).values()]
-    class_weights = 1. / torch.tensor(class_count, dtype=torch.float)
-    print(class_weights)
+        class_count = [i for i in get_class_distribution(y_train).values()]
+        class_weights = 1. / torch.tensor(class_count, dtype=torch.float)
+        print(class_weights)
 
-    class_weights_all = class_weights[target_list]
+        class_weights_all = class_weights[target_list]
 
-    weighted_sampler = WeightedRandomSampler(
-        weights=class_weights_all,
-        num_samples=len(class_weights_all),
-        replacement=True
-    )
+        weighted_sampler = WeightedRandomSampler(
+            weights=class_weights_all,
+            num_samples=len(class_weights_all),
+            replacement=True
+        )
 
     # Run on CUDA if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -183,12 +199,19 @@ def train(**options):
     model.to(device)
 
     # Define data loaders
-    train_loader = DataLoader(dataset=train_dataset, num_workers=12, batch_size=options['batch_size'],
-                              sampler=weighted_sampler)
+    if not options['under']:
+        train_loader = DataLoader(dataset=train_dataset, num_workers=12, batch_size=options['batch_size'],
+                                  sampler=weighted_sampler)
+    else:
+        train_loader = DataLoader(dataset=train_dataset, num_workers=12, batch_size=options['batch_size'], shuffle=True)
     val_loader = DataLoader(dataset=val_dataset, num_workers=12, batch_size=options['batch_size'])
 
-    criterion = torch.nn.CrossEntropyLoss(weight=class_weights.to(device))
-    optimizer = torch.optim.Adam(model.parameters(), lr=options['lr'])
+    if not options['under']:
+        criterion = torch.nn.CrossEntropyLoss(weight=class_weights.to(device))
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=options['lr'], weight_decay=1e-6, amsgrad=True)
+    optimizer = torch.optim.AdamW(model.parameters())
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
 
     accuracy_stats = {
@@ -248,7 +271,7 @@ def train(**options):
               f'Val Loss: {val_epoch_loss:.5f} | '
               f'Train Acc: {train_epoch_acc:.3f}| '
               f'Val Acc: {val_epoch_acc:.3f}')
-        torch.save(model.state_dict(), '/home/wingman2/models/pref/varijanta_10/auction' + str(e) + ".pt")
+        torch.save(model.state_dict(), '/home/wingman2/models/pref/varijanta_under_2m_1/auction' + str(e) + ".pt")
 
 
 @click.command(help="Testing preferans auction estimation")
