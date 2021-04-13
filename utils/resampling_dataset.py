@@ -39,7 +39,7 @@ def re_sample_ds(**options):
     print(Counter(Y))
 
     # define oversampling strategy
-    over = RandomOverSampler(sampling_strategy={0: 37847234, 1: 22556107, 2: 5607389, 3: 2000000, 4: 2000000})
+    over = RandomOverSampler(sampling_strategy={0: 37847234, 1: 22556107, 2: 5607389, 3: 5000000, 4: 5000000})
     X_over, Y_over = over.fit_resample(X, Y)
     print(Counter(Y_over))
 
