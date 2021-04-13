@@ -8,16 +8,19 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 import h5py
 import numpy as np
+import click
 
 
-def undersample(csv_path='/home/wingman2/datasets/pref/pref_auction.csv',
-                h5_train_x_path='/home/wingman2/datasets/pref/train_x.hdf5',
-                h5_train_y_path='/home/wingman2/datasets/pref/train_y.hdf5',
-                h5_val_x_path='/home/wingman2/datasets/pref/val_x.hdf5',
-                h5_val_y_path='/home/wingman2/datasets/pref/val_y.hdf5',
-                h5_test_x_path='/home/wingman2/datasets/pref/test_x.hdf5',
-                h5_test_y_path='/home/wingman2/datasets/pref/test_y.hdf5'):
-    df = pd.read_csv(csv_path)
+@click.command(help="Re-sampling preferans auction dataset")
+@click.option('--csv_path', default='/home/wingman2/datasets/pref/pref_auction.csv', help='CSV path')
+@click.option('--h5_train_x_path', default='/home/wingman2/datasets/pref/train_x.hdf5', help='File path')
+@click.option('--h5_train_y_path', default='/home/wingman2/datasets/pref/train_y.hdf5', help='File path')
+@click.option('--h5_val_x_path', default='/home/wingman2/datasets/pref/val_x.hdf5', help='File path')
+@click.option('--h5_val_y_path', default='/home/wingman2/datasets/pref/val_y.hdf5', help='File path')
+@click.option('--h5_test_x_path', default='/home/wingman2/datasets/pref/test_x.hdf5', help='File path')
+@click.option('--h5_test_y_path', default='/home/wingman2/datasets/pref/test_y.hdf5', help='File path')
+def re_sample_ds(**options):
+    df = pd.read_csv(options['csv_path'])
 
     # preprocess our outputs
     class2idx = {
@@ -69,30 +72,30 @@ def undersample(csv_path='/home/wingman2/datasets/pref/pref_auction.csv',
     X_val, y_val = np.array(X_val), np.array(y_val)
     X_test, y_test = np.array(X_test), np.array(y_test)
 
-    f_train_x = h5py.File(h5_train_x_path, 'w')
+    f_train_x = h5py.File(options['h5_train_x_path'], 'w')
     f_train_x.create_dataset('train_x', data=X_train)
     f_train_x.close()
 
-    f_train_y = h5py.File(h5_train_y_path, 'w')
+    f_train_y = h5py.File(options['h5_train_y_path'], 'w')
     f_train_y.create_dataset('train_y', data=y_train)
     f_train_y.close()
 
-    f_val_x = h5py.File(h5_val_x_path, 'w')
+    f_val_x = h5py.File(options['h5_val_x_path'], 'w')
     f_val_x.create_dataset('val_x', data=X_val)
     f_val_x.close()
 
-    f_val_y = h5py.File(h5_val_y_path, 'w')
+    f_val_y = h5py.File(options['h5_val_y_path'], 'w')
     f_val_y.create_dataset('val_y', data=y_val)
     f_val_y.close()
 
-    f_test_x = h5py.File(h5_test_x_path, 'w')
+    f_test_x = h5py.File(options['h5_test_x_path'], 'w')
     f_test_x.create_dataset('test_x', data=X_test)
     f_test_x.close()
 
-    f_test_y = h5py.File(h5_test_y_path, 'w')
+    f_test_y = h5py.File(options['h5_test_y_path'], 'w')
     f_test_y.create_dataset('test_y', data=y_test)
     f_test_y.close()
 
 
 if __name__ == '__main__':
-    undersample()
+    re_sample_ds()
