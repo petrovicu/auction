@@ -42,5 +42,5 @@ python pref_auction.py test
            4       0.93      0.98      0.96    499911
 
     accuracy                           0.89   2500000
-    macro avg       0.89      0.89      0.89   2500000
-    weighted avg    0.89      0.89      0.89   2500000
+    macro avg       0.89      0.89     0.89   2500000
+    weighted avg    0.89      0.89     0.89   2500000
