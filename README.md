@@ -23,6 +23,7 @@ IMPORTANT - Save all hdf5 files within a same folder.
 Run (with default options for training):
 ```
 python pref_auction.py train
+--under
 --data_path=HDF5_FOLDER
 ```
 
