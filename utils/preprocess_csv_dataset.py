@@ -14,15 +14,16 @@ def add_csv_header(old_csv_path='E:/datasets/pref/auction.csv', new_csv_path='E:
         cw.writerows(cr)
 
 
-def save_data_to_hdf5(csv_path='/home/wingman2/datasets/pref/pref_auction.csv',
+def _save_stratified_data_to_hdf5(csv_path='/home/wingman2/datasets/pref/pref_auction.csv',
                       h5_train_x_path='/home/wingman2/datasets/pref/train_x.hdf5',
                       h5_train_y_path='/home/wingman2/datasets/pref/train_y.hdf5',
                       h5_val_x_path='/home/wingman2/datasets/pref/val_x.hdf5',
                       h5_val_y_path='/home/wingman2/datasets/pref/val_y.hdf5',
                       h5_test_x_path='/home/wingman2/datasets/pref/test_x.hdf5',
                       h5_test_y_path='/home/wingman2/datasets/pref/test_y.hdf5'):
-    df = pd.read_csv(csv_path)
+    """ This one should not be used. To generate hdf5 data use resampling_dataset.py script. """
 
+    df = pd.read_csv(csv_path)
     # preprocess our outputs
     class2idx = {
         1: 0,
@@ -31,7 +32,6 @@ def save_data_to_hdf5(csv_path='/home/wingman2/datasets/pref/pref_auction.csv',
         13: 3,
         14: 4
     }
-    idx2class = {v: k for k, v in class2idx.items()}
     df['call'].replace(class2idx, inplace=True)
 
     df = df.head(20000000)
@@ -83,5 +83,4 @@ def save_data_to_hdf5(csv_path='/home/wingman2/datasets/pref/pref_auction.csv',
 
 
 if __name__ == '__main__':
-    # add_csv_header()
-    save_data_to_hdf5()
+    add_csv_header()
