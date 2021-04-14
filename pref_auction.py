@@ -143,7 +143,7 @@ def get_class_distribution(obj):
 @click.option('--logdir', default='/home/wingman2/pref_tb_logs', help='Path to logging directory')
 @click.option('--name', default='exp-' + datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
 @click.option('--checkpoints', required=False, help='Path to model checkpoints used as a starting point for training')
-@click.option('--under/--no-under', default=False)
+@click.option('--under/--no-under', default=True)
 def train(**options):
     logs_dir = os.path.join(options['logdir'], options['name'])
     writer = SummaryWriter(log_dir=logs_dir)
